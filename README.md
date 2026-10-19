@@ -136,11 +136,20 @@ See also: https://docs.immich.app/administration/reverse-proxy/
 - `immich-swipe-reviewed:<server>:<user>` (already reviewed IDs + decision)
 - `immich-swipe-preferences:<server>:<user>` (order mode + album hotkeys)
 
+## Immich v3 compatibility
+
+> **Note:** The Immich v3 API bugs are fixed in this fork. The app now uses `POST /search/random` (v3 removed `GET /assets/random`), `GET /albums?isShared=true` (v3 renamed `shared`), and sends `visibility: "timeline"` on metadata search so archived and hidden photos stay out of the queue. Error messages now include the field details from Immich's `"Validation failed"` response.
+>
+> If you are running Immich v2 or earlier, these endpoints may not exist. Check your server version before using this branch.
+
 ## Immich API key permissions
 
 Minimum:
 - `asset.read`
 - `asset.delete`
+- `asset.view` (thumbnails and previews; without it the app shows 403 errors)
+- `asset.download` (full-size videos via `/original`)
+- `user.read` (connection check via `/users/me`)
 
 If you want albums and favorites, grant the corresponding read/update permissions as well.
 
