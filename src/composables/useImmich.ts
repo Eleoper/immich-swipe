@@ -101,6 +101,14 @@ export function useImmich() {
       try {
         const errorJson = JSON.parse(errorText)
         errorMessage = errorJson.message || errorJson.error || `API error: ${response.status}`
+        // Immich v3 returns "Validation failed" plus an `errors` array with the details.
+        if (Array.isArray(errorJson.errors) && errorJson.errors.length > 0) {
+          const details = errorJson.errors
+            .map((e: { path?: string; message?: string }) => (e.path ? `${e.path}: ${e.message}` : e.message))
+            .filter(Boolean)
+            .join('; ')
+          if (details) errorMessage = `${errorMessage} (${details})`
+        }
       } catch {
         errorMessage = `API error: ${response.status} - ${errorText}`
       }
@@ -133,7 +141,11 @@ export function useImmich() {
       const attempts = uiStore.skipVideos ? SKIP_VIDEOS_MAX_ATTEMPTS : RANDOM_MAX_ATTEMPTS
       for (let attempt = 0; attempt < attempts; attempt++) {
         const count = uiStore.skipVideos ? SKIP_VIDEOS_BATCH_SIZE : RANDOM_BATCH_SIZE
-        const assets = await apiRequest<ImmichAsset[]>(`/assets/random?count=${count}`)
+        // Immich v3 removed GET /assets/random; POST /search/random replaces it.
+        const assets = await apiRequest<ImmichAsset[]>('/search/random', {
+          method: 'POST',
+          body: JSON.stringify({ size: count }),
+        })
         if (!assets || assets.length === 0) {
           continue
         }
@@ -158,6 +170,8 @@ export function useImmich() {
     const body: MetadataSearchRequest = {
       order,
       assetType: ['IMAGE', 'VIDEO'],
+      // Immich v3 defaults visibility to "any"; keep the timeline-only behavior.
+      visibility: 'timeline',
     }
     if (usePagePagination && chronologicalPage.value !== null) {
       body.page = chronologicalPage.value
@@ -183,6 +197,7 @@ export function useImmich() {
       const fallbackBody: MetadataSearchRequest = {
         order,
         assetType: ['IMAGE', 'VIDEO'],
+        visibility: 'timeline',
         take: CHRONO_PAGE_SIZE,
         skip: chronologicalSkip.value,
       }
@@ -394,7 +409,8 @@ export function useImmich() {
     // Fetch owned + shared albums
     const [ownedAlbums, sharedAlbums] = await Promise.all([
       apiRequest<ImmichAlbum[]>('/albums'),
-      apiRequest<ImmichAlbum[]>('/albums?shared=true'),
+      // Immich v3 renamed the `shared` query parameter to `isShared`.
+      apiRequest<ImmichAlbum[]>('/albums?isShared=true'),
     ])
 
     // Merge & deduplicate (by id)

@@ -74,6 +74,7 @@ export interface MetadataSearchRequest {
   size?: number
   order?: 'asc' | 'desc'
   assetType?: ('IMAGE' | 'VIDEO')[]
+  visibility?: 'archive' | 'timeline' | 'hidden' | 'locked'
 }
 
 export interface MetadataSearchResponse {
